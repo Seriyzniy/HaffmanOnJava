@@ -1,3 +1,7 @@
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -6,11 +10,14 @@ import java.util.Map;
 public class Haffman {
     private List<RepeatSymbol> alfabet = new ArrayList<>();
     private WorkWithHaffmanTree treeService  = new WorkWithHaffmanTree();
+    private String filePath = "E:/compress.txt";
     private int blockSize = 16;
 
     private Map<Character, String> codes;
+
     private String decompressMessage = "";
     private List<Short> compressMessage = new ArrayList<>();
+    private byte[] compressBytes;
     {
         compressMessage.add((short)0);
     }
@@ -42,12 +49,6 @@ public class Haffman {
         }
         return null;
     }
-    public void OutAlfabet(){
-        for(RepeatSymbol i : alfabet){
-            System.out.print(i.getSymbol() + " " + i.getCountRepeat() + " \n");
-        }
-        System.out.print("\n");
-    }
     //
     //Write in compress message
     private void WriteInCompressMessage(Short code, int bitsLenght){
@@ -55,7 +56,7 @@ public class Haffman {
         int offsetLowBits = 0;
         int freeSizeBlock = 0;
         short result = 0;
-
+        //Calculation offsets
         if(lastBuzyBit == 0 || lastBuzyBit == blockSize){
             offsetHighBits = blockSize - bitsLenght;
             lastBuzyBit = blockSize - offsetHighBits;
@@ -72,6 +73,7 @@ public class Haffman {
                 lastBuzyBit = blockSize - offsetLowBits;
             }
         }
+        //Write in compress message
         if(offsetLowBits == 0){
             result = (short) ((code << offsetHighBits) | compressMessage.get(countWord));
             compressMessage.set(countWord, result);
@@ -98,9 +100,7 @@ public class Haffman {
         changedMessage.append('#');                 //escape symbol
 
         CreateAlfabet(changedMessage.toString());
-        OutAlfabet();
         treeService.CreateTree(alfabet);
-        treeService.OutTree();
         treeService.CreateHaffmanCodes();
         codes = treeService.getHaffmanCodes();
 
@@ -147,6 +147,33 @@ public class Haffman {
         }
     }
     //
+    //Save to file
+    private boolean CompressMessageToBytes(){
+        if(!compressMessage.isEmpty()){
+            compressBytes = new byte[compressMessage.size()*blockSize/8];
+            for(int i = 0, j = 0; i < compressMessage.size(); i++){
+                compressBytes[j++] = (byte)(compressMessage.get(i) >> 8);
+                compressBytes[j++] = (byte)(compressMessage.get(i) >> 0);
+            }
+            return true;
+        }else{
+            System.out.println("Error of overwriting compress message (16 bits) to message (8 bits)");
+            return false;
+        }
+
+    }
+    public void saveBytesToFile(){
+        if(!CompressMessageToBytes()) return;
+        try{
+            FileOutputStream stream = new FileOutputStream(filePath);
+            stream.write(compressBytes);
+        }catch (FileNotFoundException e){
+            System.out.println("Error to save file!");
+        }catch (IOException e){
+            System.out.println("Error to write file!");
+        }
+    }
+    //
     //Output info
     public void printTree(){
         treeService.OutTree();
@@ -155,6 +182,12 @@ public class Haffman {
         if(!codes.isEmpty()) {
             System.out.println(treeService.getHaffmanCodes() + "\n");
         }
+    }
+    public void OutAlfabet(){
+        for(RepeatSymbol i : alfabet){
+            System.out.print(i.getSymbol() + " " + i.getCountRepeat() + " \n");
+        }
+        System.out.print("\n");
     }
     public void printCompressMessage(){//todo
         String binaryStr;
